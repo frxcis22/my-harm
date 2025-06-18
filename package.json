@@ -1,5 +1,5 @@
 {
-  "name": "my-harm",
+  "name": "cyberscroll-blog",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -10,7 +10,24 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "react-router-dom": "^6.8.0",
+    "react-markdown": "^8.0.7",
+    "react-syntax-highlighter": "^15.5.0",
+    "lucide-react": "^0.263.1",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^1.14.0",
+    "date-fns": "^2.30.0",
+    "react-hook-form": "^7.45.4",
+    "zod": "^3.22.2",
+    "@hookform/resolvers": "^3.3.2",
+    "react-hot-toast": "^2.4.1",
+    "framer-motion": "^10.16.4"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.3.5",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.27"
   },
   "scripts": {
     "start": "react-scripts start",
