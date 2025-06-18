@@ -22,7 +22,7 @@
     "zod": "^3.22.2",
     "@hookform/resolvers": "^3.3.2",
     "react-hot-toast": "^2.4.1",
-    "framer-motion": "^10.16.4"
+    "framer-motion": "^11.0.0"
   },
   "devDependencies": {
     "tailwindcss": "^3.3.5",
