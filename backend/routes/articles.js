@@ -215,7 +215,7 @@ router.get('/:id', optionalAuth, (req, res) => {
 
 // @route   POST /api/articles
 // @desc    Create a new article
-// @access  Private
+// @access  Private (authenticated users only)
 router.post('/', authenticateToken, (req, res) => {
   try {
     // Validate request body
@@ -262,8 +262,8 @@ router.post('/', authenticateToken, (req, res) => {
 
 // @route   PUT /api/articles/:id
 // @desc    Update an article
-// @access  Private (author only)
-router.put('/:id', authenticateToken, (req, res) => {
+// @access  Private (article author only)
+router.put('/:id', authenticateToken, authorizeResource('authorId'), (req, res) => {
   try {
     // Validate article ID
     const { id } = uuidSchema.parse({ id: req.params.id });
@@ -280,7 +280,7 @@ router.put('/:id', authenticateToken, (req, res) => {
       });
     }
 
-    // Check if user is the author
+    // Check if user owns the article
     if (article.authorId !== req.user.userId) {
       return res.status(403).json({
         error: 'Access denied',
@@ -315,24 +315,22 @@ router.put('/:id', authenticateToken, (req, res) => {
 
 // @route   DELETE /api/articles/:id
 // @desc    Delete an article
-// @access  Private (author only)
-router.delete('/:id', authenticateToken, (req, res) => {
+// @access  Private (article author only)
+router.delete('/:id', authenticateToken, authorizeResource('authorId'), (req, res) => {
   try {
     // Validate article ID
     const { id } = uuidSchema.parse({ id: req.params.id });
     
     // Find article
-    const articleIndex = articles.findIndex(article => article.id === id);
-    if (articleIndex === -1) {
+    const article = findArticleById(id);
+    if (!article) {
       return res.status(404).json({
         error: 'Article not found',
         message: 'Article does not exist'
       });
     }
 
-    const article = articles[articleIndex];
-
-    // Check if user is the author
+    // Check if user owns the article
     if (article.authorId !== req.user.userId) {
       return res.status(403).json({
         error: 'Access denied',
@@ -340,8 +338,11 @@ router.delete('/:id', authenticateToken, (req, res) => {
       });
     }
 
-    // Remove article
-    articles.splice(articleIndex, 1);
+    // Remove article from database
+    const articleIndex = articles.findIndex(a => a.id === id);
+    if (articleIndex !== -1) {
+      articles.splice(articleIndex, 1);
+    }
 
     res.json({
       message: 'Article deleted successfully'
@@ -371,8 +372,7 @@ router.get('/my/articles', authenticateToken, (req, res) => {
     const userArticles = getArticlesByAuthor(req.user.userId);
     
     res.json({
-      articles: userArticles,
-      total: userArticles.length
+      articles: userArticles
     });
 
   } catch (error) {

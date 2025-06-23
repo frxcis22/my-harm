@@ -87,99 +87,41 @@ export const publicAPI = {
   },
 };
 
-// Admin API (for you only - requires authentication)
-export const adminAPI = {
+// User API (for authenticated users to manage their own content)
+export const userAPI = {
   // Articles management
   articles: {
     getAll: async (params = {}) => {
       const queryString = new URLSearchParams(params).toString();
-      return apiRequest(`/admin/articles?${queryString}`);
+      return apiRequest(`/articles?${queryString}`);
     },
 
     getById: async (id) => {
-      return apiRequest(`/admin/articles/${id}`);
+      return apiRequest(`/articles/${id}`);
     },
 
     create: async (articleData) => {
-      return apiRequest('/admin/articles', {
+      return apiRequest('/articles', {
         method: 'POST',
         body: JSON.stringify(articleData),
       });
     },
 
     update: async (id, articleData) => {
-      return apiRequest(`/admin/articles/${id}`, {
+      return apiRequest(`/articles/${id}`, {
         method: 'PUT',
         body: JSON.stringify(articleData),
       });
     },
 
     delete: async (id) => {
-      return apiRequest(`/admin/articles/${id}`, {
+      return apiRequest(`/articles/${id}`, {
         method: 'DELETE',
       });
     },
 
-    publish: async (id) => {
-      return apiRequest(`/admin/articles/${id}/publish`, {
-        method: 'POST',
-      });
-    },
-
-    unpublish: async (id) => {
-      return apiRequest(`/admin/articles/${id}/unpublish`, {
-        method: 'POST',
-      });
-    },
-
-    getStats: async () => {
-      return apiRequest('/admin/articles/stats');
-    },
-  },
-
-  // Comments management
-  comments: {
-    getAll: async (params = {}) => {
-      const queryString = new URLSearchParams(params).toString();
-      return apiRequest(`/admin/comments?${queryString}`);
-    },
-
-    approve: async (id) => {
-      return apiRequest(`/admin/comments/${id}/approve`, {
-        method: 'POST',
-      });
-    },
-
-    reject: async (id) => {
-      return apiRequest(`/admin/comments/${id}/reject`, {
-        method: 'POST',
-      });
-    },
-
-    delete: async (id) => {
-      return apiRequest(`/admin/comments/${id}`, {
-        method: 'DELETE',
-      });
-    },
-  },
-
-  // Messages management
-  messages: {
-    getAll: async (params = {}) => {
-      const queryString = new URLSearchParams(params).toString();
-      return apiRequest(`/admin/messages?${queryString}`);
-    },
-
-    markRead: async (id) => {
-      return apiRequest(`/admin/messages/${id}/read`, {
-        method: 'POST',
-      });
-    },
-
-    delete: async (id) => {
-      return apiRequest(`/admin/messages/${id}`, {
-        method: 'DELETE',
-      });
+    getMyArticles: async () => {
+      return apiRequest('/articles/my/articles');
     },
   },
 
@@ -187,11 +129,11 @@ export const adminAPI = {
   uploads: {
     getAll: async (params = {}) => {
       const queryString = new URLSearchParams(params).toString();
-      return apiRequest(`/admin/uploads?${queryString}`);
+      return apiRequest(`/uploads?${queryString}`);
     },
 
     getById: async (id) => {
-      return apiRequest(`/admin/uploads/${id}`);
+      return apiRequest(`/uploads/${id}`);
     },
 
     upload: async (files, metadata = {}) => {
@@ -214,7 +156,7 @@ export const adminAPI = {
         }
       });
 
-      const response = await fetch(`${API_BASE_URL}/admin/uploads`, {
+      const response = await fetch(`${API_BASE_URL}/uploads`, {
         method: 'POST',
         body: formData,
       });
@@ -223,20 +165,20 @@ export const adminAPI = {
     },
 
     update: async (id, metadata) => {
-      return apiRequest(`/admin/uploads/${id}`, {
+      return apiRequest(`/uploads/${id}`, {
         method: 'PUT',
         body: JSON.stringify(metadata),
       });
     },
 
     delete: async (id) => {
-      return apiRequest(`/admin/uploads/${id}`, {
+      return apiRequest(`/uploads/${id}`, {
         method: 'DELETE',
       });
     },
 
     download: async (id) => {
-      const response = await fetch(`${API_BASE_URL}/admin/uploads/download/${id}`);
+      const response = await fetch(`${API_BASE_URL}/uploads/download/${id}`);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -251,81 +193,132 @@ export const adminAPI = {
   categories: {
     getAll: async (params = {}) => {
       const queryString = new URLSearchParams(params).toString();
-      return apiRequest(`/admin/categories?${queryString}`);
+      return apiRequest(`/categories?${queryString}`);
     },
 
     getById: async (id) => {
-      return apiRequest(`/admin/categories/${id}`);
+      return apiRequest(`/categories/${id}`);
     },
 
     create: async (categoryData) => {
-      return apiRequest('/admin/categories', {
+      return apiRequest('/categories', {
         method: 'POST',
         body: JSON.stringify(categoryData),
       });
     },
 
     update: async (id, categoryData) => {
-      return apiRequest(`/admin/categories/${id}`, {
+      return apiRequest(`/categories/${id}`, {
         method: 'PUT',
         body: JSON.stringify(categoryData),
       });
     },
 
     delete: async (id) => {
-      return apiRequest(`/admin/categories/${id}`, {
+      return apiRequest(`/categories/${id}`, {
         method: 'DELETE',
-      });
-    },
-
-    getStats: async () => {
-      return apiRequest('/admin/categories/stats/overview');
-    },
-
-    getPopular: async (limit = 10) => {
-      return apiRequest(`/admin/categories/popular?limit=${limit}`);
-    },
-
-    merge: async (sourceId, targetId) => {
-      return apiRequest('/admin/categories/merge', {
-        method: 'POST',
-        body: JSON.stringify({ sourceId, targetId }),
       });
     },
   },
 
-  // Settings management
-  settings: {
-    getPreferences: async () => {
-      return apiRequest('/admin/settings');
+  // User profile management
+  profile: {
+    get: async () => {
+      return apiRequest('/auth/profile');
     },
 
-    updatePreferences: async (preferences) => {
-      return apiRequest('/admin/settings', {
+    update: async (profileData) => {
+      return apiRequest('/users/profile', {
         method: 'PUT',
-        body: JSON.stringify(preferences),
+        body: JSON.stringify(profileData),
       });
     },
 
-    exportData: async (exportOptions = {}) => {
-      return apiRequest('/admin/export', {
+    changePassword: async (passwordData) => {
+      return apiRequest('/auth/change-password', {
         method: 'POST',
-        body: JSON.stringify(exportOptions),
-      });
-    },
-
-    importData: async (importData) => {
-      return apiRequest('/admin/import', {
-        method: 'POST',
-        body: JSON.stringify({ importData }),
+        body: JSON.stringify(passwordData),
       });
     },
   },
 };
 
+// Authentication API
+export const authAPI = {
+  login: async (credentials) => {
+    return apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+  },
+
+  register: async (userData) => {
+    return apiRequest('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  },
+
+  logout: async () => {
+    return apiRequest('/auth/logout', {
+      method: 'POST',
+    });
+  },
+
+  getProfile: async () => {
+    return apiRequest('/auth/profile');
+  },
+
+  updateProfile: async (profileData) => {
+    return apiRequest('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  },
+
+  changePassword: async (passwordData) => {
+    return apiRequest('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(passwordData),
+    });
+  },
+
+  refreshToken: async () => {
+    return apiRequest('/auth/refresh', {
+      method: 'POST',
+    });
+  },
+};
+
+// Utility functions for API management
+export const apiUtils = {
+  setAuthToken: (token) => {
+    localStorage.setItem('authToken', token);
+  },
+
+  getAuthToken: () => {
+    return localStorage.getItem('authToken');
+  },
+
+  removeAuthToken: () => {
+    localStorage.removeItem('authToken');
+  },
+
+  isAuthenticated: () => {
+    return !!localStorage.getItem('authToken');
+  },
+
+  getAuthHeaders: () => {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  },
+};
+
 const api = {
   public: publicAPI,
-  admin: adminAPI,
+  user: userAPI,
+  auth: authAPI,
+  utils: apiUtils,
 };
 
 export default api; 

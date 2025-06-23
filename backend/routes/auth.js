@@ -18,7 +18,7 @@ let users = [
     jobTitle: 'IT Security Professional',
     organization: 'CyberScroll Security',
     bio: 'Cybersecurity professional with expertise in threat intelligence, incident response, and security architecture.',
-    role: 'admin',
+    role: 'user',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01')
   }
@@ -77,7 +77,7 @@ router.post('/register', async (req, res) => {
       jobTitle: validatedData.jobTitle || '',
       organization: validatedData.organization || '',
       bio: validatedData.bio || '',
-      role: 'user',
+      role: 'user', // All new users are regular users
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -92,7 +92,7 @@ router.post('/register', async (req, res) => {
     const { password, ...userWithoutPassword } = newUser;
     
     res.status(201).json({
-      message: 'User registered successfully',
+      message: 'Registration successful',
       user: userWithoutPassword,
       token
     });
@@ -167,10 +167,10 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// @route   GET /api/auth/me
-// @desc    Get current user profile
+// @route   GET /api/auth/profile
+// @desc    Get user profile
 // @access  Private
-router.get('/me', authenticateToken, (req, res) => {
+router.get('/profile', authenticateToken, (req, res) => {
   try {
     const user = findUserById(req.user.userId);
     if (!user) {
@@ -286,98 +286,6 @@ router.post('/logout', authenticateToken, (req, res) => {
   res.json({
     message: 'Logout successful'
   });
-});
-
-// @route   POST /api/auth/admin-login
-// @desc    Authenticate admin with key
-// @access  Public
-router.post('/admin-login', async (req, res) => {
-  try {
-    const { adminKey } = req.body;
-
-    if (!adminKey) {
-      return res.status(400).json({
-        error: 'Admin key required',
-        message: 'Please provide an admin key'
-      });
-    }
-
-    // Check if admin key matches
-    const expectedAdminKey = process.env.ADMIN_KEY || 'cyberscroll-admin-2024';
-    
-    if (adminKey !== expectedAdminKey) {
-      return res.status(401).json({
-        error: 'Authentication failed',
-        message: 'Invalid admin key'
-      });
-    }
-
-    // Find admin user
-    const adminUser = users.find(user => user.role === 'admin');
-    if (!adminUser) {
-      return res.status(500).json({
-        error: 'Admin user not found',
-        message: 'Admin user is not configured'
-      });
-    }
-
-    // Generate token
-    const token = generateToken(adminUser);
-
-    // Return admin data (without password) and token
-    const { password, ...adminWithoutPassword } = adminUser;
-    
-    res.json({
-      message: 'Admin login successful',
-      user: adminWithoutPassword,
-      token
-    });
-
-  } catch (error) {
-    console.error('Admin login error:', error);
-    res.status(500).json({
-      error: 'Admin login failed',
-      message: 'Internal server error'
-    });
-  }
-});
-
-// @route   POST /api/auth/verify-admin-key
-// @desc    Verify admin key without login
-// @access  Public
-router.post('/verify-admin-key', async (req, res) => {
-  try {
-    const { adminKey } = req.body;
-
-    if (!adminKey) {
-      return res.status(400).json({
-        error: 'Admin key required',
-        message: 'Please provide an admin key'
-      });
-    }
-
-    // Check if admin key matches
-    const expectedAdminKey = process.env.ADMIN_KEY || 'cyberscroll-admin-2024';
-    
-    if (adminKey !== expectedAdminKey) {
-      return res.status(401).json({
-        error: 'Invalid admin key',
-        message: 'The provided admin key is not valid'
-      });
-    }
-
-    res.json({
-      message: 'Admin key verified successfully',
-      valid: true
-    });
-
-  } catch (error) {
-    console.error('Admin key verification error:', error);
-    res.status(500).json({
-      error: 'Verification failed',
-      message: 'Internal server error'
-    });
-  }
 });
 
 module.exports = router; 
