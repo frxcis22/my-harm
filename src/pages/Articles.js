@@ -327,4 +327,3 @@ const Articles = () => {
 };
 
 export default Articles; 
-export default Articles; 
