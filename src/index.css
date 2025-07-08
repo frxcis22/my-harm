@@ -8,7 +8,7 @@
     @apply border-border;
   }
   
-  body {
+body {
     @apply bg-background text-foreground font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
@@ -75,8 +75,8 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
-  }
-  
+}
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

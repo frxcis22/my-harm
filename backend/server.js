@@ -9,10 +9,7 @@ const path = require('path');
 require('dotenv').config();
 
 const publicRoutes = require('./routes/public');
-const authRoutes = require('./routes/auth');
 const articleRoutes = require('./routes/articles');
-const uploadRoutes = require('./routes/uploads');
-const categoryRoutes = require('./routes/categories');
 const userRoutes = require('./routes/users');
 
 const app = express();
@@ -81,10 +78,7 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/public', publicRoutes);
-app.use('/api/auth', authRoutes);
 app.use('/api/articles', articleRoutes);
-app.use('/api/uploads', uploadRoutes);
-app.use('/api/categories', categoryRoutes);
 app.use('/api/users', userRoutes);
 
 // 404 handler

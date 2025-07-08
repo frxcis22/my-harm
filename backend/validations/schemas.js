@@ -1,19 +1,13 @@
 const { z } = require('zod');
 
-// User validation schemas
-const userRegistrationSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name must be less than 50 characters'),
+// Verification schemas
+const verificationCodeSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one uppercase letter, one lowercase letter, and one number'),
-  jobTitle: z.string().optional(),
-  organization: z.string().optional(),
-  bio: z.string().max(500, 'Bio must be less than 500 characters').optional()
+  code: z.string().length(6, 'Verification code must be 6 digits')
 });
 
-const userLoginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required')
+const sendCodeSchema = z.object({
+  email: z.string().email('Invalid email address')
 });
 
 const userUpdateSchema = z.object({
@@ -97,17 +91,6 @@ const uuidSchema = z.object({
   id: z.string().uuid('Invalid UUID format')
 });
 
-// Password change schema
-const passwordChangeSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(8, 'Password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one uppercase letter, one lowercase letter, and one number'),
-  confirmPassword: z.string().min(1, 'Please confirm your password')
-}).refine(data => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"]
-});
-
 // Export/Import schema
 const exportSchema = z.object({
   format: z.enum(['json', 'markdown', 'pdf']).default('json'),
@@ -120,11 +103,12 @@ const exportSchema = z.object({
 });
 
 module.exports = {
+  // Verification schemas
+  verificationCodeSchema,
+  sendCodeSchema,
+  
   // User schemas
-  userRegistrationSchema,
-  userLoginSchema,
   userUpdateSchema,
-  passwordChangeSchema,
   
   // Article schemas
   articleCreateSchema,

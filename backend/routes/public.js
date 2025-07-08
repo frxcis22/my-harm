@@ -1,6 +1,7 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { z } = require('zod');
+const nodemailer = require('nodemailer');
 const router = express.Router();
 
 // Mock data for public access
@@ -87,6 +88,125 @@ let messages = [
     status: 'unread'
   }
 ];
+
+// Email transporter configuration
+const createTransporter = () => {
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_PASS;
+  
+  if (!emailUser || !emailPass) {
+    console.warn('⚠️  Email credentials not configured. Email notifications will be disabled.');
+    return null;
+  }
+
+  return nodemailer.createTransporter({
+    service: 'gmail',
+    auth: {
+      user: emailUser,
+      pass: emailPass
+    }
+  });
+};
+
+const transporter = createTransporter();
+
+// Notification functions
+const sendNotificationEmail = async (type, data) => {
+  if (!transporter) {
+    console.log(`📧 [MOCK] ${type} notification:`, data);
+    return true;
+  }
+
+  let subject, html;
+  
+  switch (type) {
+    case 'comment':
+      subject = `New Comment on "${data.articleTitle}"`;
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">CyberScroll Security</h2>
+          <h3>New Comment Received</h3>
+          <p><strong>Article:</strong> ${data.articleTitle}</p>
+          <p><strong>Commenter:</strong> ${data.author} (${data.email})</p>
+          <p><strong>Comment:</strong></p>
+          <div style="background: #f5f5f5; padding: 15px; border-left: 4px solid #2563eb; margin: 15px 0;">
+            ${data.content}
+          </div>
+          <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+          <hr style="margin: 30px 0;">
+          <p style="color: #666; font-size: 12px;">This is an automated notification from CyberScroll Security.</p>
+        </div>
+      `;
+      break;
+      
+    case 'like':
+      subject = `New Like on "${data.articleTitle}"`;
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">CyberScroll Security</h2>
+          <h3>New Like Received</h3>
+          <p><strong>Article:</strong> ${data.articleTitle}</p>
+          <p><strong>Visitor ID:</strong> ${data.visitorId}</p>
+          <p><strong>Total Likes:</strong> ${data.totalLikes}</p>
+          <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+          <hr style="margin: 30px 0;">
+          <p style="color: #666; font-size: 12px;">This is an automated notification from CyberScroll Security.</p>
+        </div>
+      `;
+      break;
+      
+    case 'share':
+      subject = `Content Shared: "${data.articleTitle}"`;
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">CyberScroll Security</h2>
+          <h3>Content Shared</h3>
+          <p><strong>Article:</strong> ${data.articleTitle}</p>
+          <p><strong>Platform:</strong> ${data.platform}</p>
+          <p><strong>Shared by:</strong> ${data.visitorId}</p>
+          <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+          <hr style="margin: 30px 0;">
+          <p style="color: #666; font-size: 12px;">This is an automated notification from CyberScroll Security.</p>
+        </div>
+      `;
+      break;
+      
+    case 'contact':
+      subject = `New Contact Message: ${data.subject}`;
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">CyberScroll Security</h2>
+          <h3>New Contact Message</h3>
+          <p><strong>From:</strong> ${data.name} (${data.email})</p>
+          <p><strong>Subject:</strong> ${data.subject}</p>
+          <p><strong>Message:</strong></p>
+          <div style="background: #f5f5f5; padding: 15px; border-left: 4px solid #2563eb; margin: 15px 0;">
+            ${data.message}
+          </div>
+          <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+          <hr style="margin: 30px 0;">
+          <p style="color: #666; font-size: 12px;">This is an automated notification from CyberScroll Security.</p>
+        </div>
+      `;
+      break;
+  }
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: process.env.EMAIL_USER, // Send to admin
+    subject: subject,
+    html: html
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`📧 ${type} notification sent to admin`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Failed to send ${type} notification:`, error.message);
+    return false;
+  }
+};
 
 // Helper functions
 const findArticleById = (id) => {
@@ -228,7 +348,6 @@ router.post('/articles/:id/comments', (req, res) => {
     const { id } = req.params;
     const { author, email, content } = req.body;
 
-    // Validate input
     if (!author || !email || !content) {
       return res.status(400).json({
         error: 'Missing required fields',
@@ -248,20 +367,29 @@ router.post('/articles/:id/comments', (req, res) => {
     const newComment = {
       id: uuidv4(),
       articleId: id,
-      author: author.trim(),
-      email: email.trim(),
-      content: content.trim(),
+      author,
+      email,
+      content,
       createdAt: new Date(),
-      status: 'pending' // Requires admin approval
+      status: 'approved' // Auto-approve in public mode
     };
 
+    // Add comment to database
     comments.push(newComment);
 
-    // Increment comment count
-    article.commentCount += 1;
+    // Update article comment count
+    article.commentCount = findCommentsByArticleId(id).length;
+
+    // Send notification email
+    sendNotificationEmail('comment', {
+      articleTitle: article.title,
+      author,
+      email,
+      content
+    });
 
     res.status(201).json({
-      message: 'Comment submitted successfully. It will be visible after approval.',
+      message: 'Comment added successfully',
       comment: newComment
     });
 
@@ -284,8 +412,8 @@ router.post('/articles/:id/like', (req, res) => {
 
     if (!visitorId) {
       return res.status(400).json({
-        error: 'Visitor ID required',
-        message: 'Visitor ID is required to like/unlike articles'
+        error: 'Missing visitor ID',
+        message: 'Visitor ID is required'
       });
     }
 
@@ -297,51 +425,64 @@ router.post('/articles/:id/like', (req, res) => {
       });
     }
 
-    const existingLike = likes.find(like => 
-      like.articleId === id && like.visitorId === visitorId
-    );
+    const hasLiked = hasVisitorLiked(id, visitorId);
+    let action;
 
-    if (existingLike) {
+    if (hasLiked) {
       // Unlike
       const likeIndex = likes.findIndex(like => 
         like.articleId === id && like.visitorId === visitorId
       );
-      likes.splice(likeIndex, 1);
-      article.likeCount = Math.max(0, article.likeCount - 1);
-
-      res.json({
-        message: 'Article unliked',
-        liked: false,
-        likeCount: article.likeCount
-      });
+      if (likeIndex !== -1) {
+        likes.splice(likeIndex, 1);
+      }
+      action = 'unliked';
     } else {
       // Like
       likes.push({ articleId: id, visitorId });
-      article.likeCount += 1;
-
-      res.json({
-        message: 'Article liked',
-        liked: true,
-        likeCount: article.likeCount
+      action = 'liked';
+      
+      // Send notification email for new likes
+      sendNotificationEmail('like', {
+        articleTitle: article.title,
+        visitorId,
+        totalLikes: getLikesCount(id) + 1
       });
     }
 
+    // Update article like count
+    article.likeCount = getLikesCount(id);
+
+    res.json({
+      message: `Article ${action} successfully`,
+      liked: !hasLiked,
+      likeCount: article.likeCount
+    });
+
   } catch (error) {
-    console.error('Toggle like error:', error);
+    console.error('Like article error:', error);
     res.status(500).json({
-      error: 'Failed to toggle like',
+      error: 'Failed to like article',
       message: 'Internal server error'
     });
   }
 });
 
-// @route   GET /api/public/articles/:id/likes
-// @desc    Get article likes count
+// @route   POST /api/public/articles/:id/share
+// @desc    Share article
 // @access  Public
-router.get('/articles/:id/likes', (req, res) => {
+router.post('/articles/:id/share', (req, res) => {
   try {
     const { id } = req.params;
-    
+    const { platform, visitorId } = req.body;
+
+    if (!platform || !visitorId) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'Platform and visitor ID are required'
+      });
+    }
+
     const article = findArticleById(id);
     if (!article) {
       return res.status(404).json({
@@ -350,138 +491,23 @@ router.get('/articles/:id/likes', (req, res) => {
       });
     }
 
-    const likeCount = getLikesCount(id);
+    // Send notification email
+    sendNotificationEmail('share', {
+      articleTitle: article.title,
+      platform,
+      visitorId
+    });
 
     res.json({
-      likeCount
+      message: 'Article shared successfully',
+      platform,
+      articleTitle: article.title
     });
 
   } catch (error) {
-    console.error('Get likes error:', error);
+    console.error('Share article error:', error);
     res.status(500).json({
-      error: 'Failed to get likes',
-      message: 'Internal server error'
-    });
-  }
-});
-
-// @route   GET /api/public/categories
-// @desc    Get all categories
-// @access  Public
-router.get('/categories', (req, res) => {
-  try {
-    const categories = [
-      { name: 'ThreatIntel', count: 8 },
-      { name: 'VendorRisk', count: 5 },
-      { name: 'Detection', count: 6 },
-      { name: 'Compliance', count: 4 },
-      { name: 'ZeroDay', count: 3 },
-      { name: 'IncidentResponse', count: 4 },
-      { name: 'CloudSec', count: 3 },
-      { name: 'PenTesting', count: 2 }
-    ];
-
-    res.json({
-      categories
-    });
-
-  } catch (error) {
-    console.error('Get categories error:', error);
-    res.status(500).json({
-      error: 'Failed to get categories',
-      message: 'Internal server error'
-    });
-  }
-});
-
-// @route   GET /api/public/search
-// @desc    Search articles
-// @access  Public
-router.get('/search', (req, res) => {
-  try {
-    const { q, page = 1, limit = 10 } = req.query;
-    
-    if (!q) {
-      return res.status(400).json({
-        error: 'Search query required',
-        message: 'Search term is required'
-      });
-    }
-
-    const searchTerm = q.toLowerCase();
-    const searchResults = publicArticles.filter(article => 
-      article.status === 'published' && (
-        article.title.toLowerCase().includes(searchTerm) ||
-        article.excerpt.toLowerCase().includes(searchTerm) ||
-        article.content.toLowerCase().includes(searchTerm) ||
-        article.tags.some(tag => tag.toLowerCase().includes(searchTerm))
-      )
-    );
-
-    // Sort by relevance (simple implementation)
-    searchResults.sort((a, b) => {
-      const aTitleMatch = a.title.toLowerCase().includes(searchTerm);
-      const bTitleMatch = b.title.toLowerCase().includes(searchTerm);
-      if (aTitleMatch && !bTitleMatch) return -1;
-      if (!aTitleMatch && bTitleMatch) return 1;
-      return new Date(b.publishedAt) - new Date(a.publishedAt);
-    });
-
-    // Pagination
-    const total = searchResults.length;
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + parseInt(limit);
-    const paginatedResults = searchResults.slice(startIndex, endIndex);
-
-    res.json({
-      results: paginatedResults,
-      query: q,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
-
-  } catch (error) {
-    console.error('Search error:', error);
-    res.status(500).json({
-      error: 'Search failed',
-      message: 'Internal server error'
-    });
-  }
-});
-
-// @route   GET /api/public/stats
-// @desc    Get blog statistics
-// @access  Public
-router.get('/stats', (req, res) => {
-  try {
-    const publishedArticles = publicArticles.filter(article => article.status === 'published');
-    const totalViews = publishedArticles.reduce((sum, article) => sum + article.viewCount, 0);
-    const totalLikes = publishedArticles.reduce((sum, article) => sum + article.likeCount, 0);
-    const totalComments = publishedArticles.reduce((sum, article) => sum + article.commentCount, 0);
-
-    const stats = {
-      totalArticles: publishedArticles.length,
-      totalViews,
-      totalLikes,
-      totalComments,
-      averageViews: publishedArticles.length > 0 ? Math.round(totalViews / publishedArticles.length) : 0,
-      mostViewed: publishedArticles.length > 0 
-        ? publishedArticles.reduce((max, article) => article.viewCount > max.viewCount ? article : max)
-        : null
-    };
-
-    res.json({
-      stats
-    });
-
-  } catch (error) {
-    console.error('Get stats error:', error);
-    res.status(500).json({
-      error: 'Failed to get statistics',
+      error: 'Failed to share article',
       message: 'Internal server error'
     });
   }
@@ -494,7 +520,6 @@ router.post('/contact', (req, res) => {
   try {
     const { name, email, subject, message } = req.body;
 
-    // Validate input
     if (!name || !email || !subject || !message) {
       return res.status(400).json({
         error: 'Missing required fields',
@@ -505,18 +530,27 @@ router.post('/contact', (req, res) => {
     // Create new message
     const newMessage = {
       id: uuidv4(),
-      name: name.trim(),
-      email: email.trim(),
-      subject: subject.trim(),
-      message: message.trim(),
+      name,
+      email,
+      subject,
+      message,
       createdAt: new Date(),
       status: 'unread'
     };
 
+    // Add message to database
     messages.push(newMessage);
 
+    // Send notification email
+    sendNotificationEmail('contact', {
+      name,
+      email,
+      subject,
+      message
+    });
+
     res.status(201).json({
-      message: 'Message sent successfully. I will get back to you soon!',
+      message: 'Message sent successfully',
       messageId: newMessage.id
     });
 

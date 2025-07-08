@@ -3,26 +3,35 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
   FileText, 
-  Plus, 
-  Upload, 
-  Tag, 
   Settings, 
   Shield,
-  X
+  X,
+  Mail,
+  Bell,
+  UserCheck
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ isOpen, onClose, isAdmin }) => {
   const location = useLocation();
   const { isDark, toggleTheme } = useTheme();
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: Home },
-    { name: 'My Articles', href: '/articles', icon: FileText },
-    { name: 'New Post', href: '/editor', icon: Plus },
-    { name: 'Uploads', href: '/uploads', icon: Upload },
-    { name: 'Categories', href: '/categories', icon: Tag },
+    { name: 'Home', href: '/', icon: Home },
+    { name: 'Blog Articles', href: '/articles', icon: FileText },
+    { name: 'Contact', href: '/contact', icon: Mail },
+    { name: 'Subscription Preferences', href: '/subscription', icon: UserCheck },
     { name: 'Settings', href: '/settings', icon: Settings },
+  ];
+
+  // Admin-only navigation items
+  const adminOnlyNavigation = [
+    { name: 'Notifications', href: '/notifications', icon: Bell },
+  ];
+
+  // Admin-only navigation
+  const adminNavigation = [
+    { name: 'Admin Dashboard', href: '/dashboard', icon: Home },
   ];
 
   const isActive = (path) => {
@@ -79,6 +88,53 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </Link>
               );
             })}
+            
+            {/* Admin-only navigation items - Only show when in admin mode */}
+            {isAdmin && adminOnlyNavigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={onClose}
+                  className={`flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive(item.href)
+                      ? 'bg-primary text-white'
+                      : 'text-muted hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+            
+            {/* Admin Section - Only show when in admin mode */}
+            {isAdmin && (
+              <div className="pt-4 border-t border-gray-200">
+                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Admin Access
+                </div>
+                {adminNavigation.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      onClick={onClose}
+                      className={`flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                        isActive(item.href)
+                          ? 'bg-blue-600 text-white'
+                          : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </nav>
 
           {/* Footer */}

@@ -7,7 +7,6 @@ const {
   articleQuerySchema,
   uuidSchema 
 } = require('../validations/schemas');
-const { authenticateToken, optionalAuth, authorizeResource } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -74,8 +73,8 @@ const incrementViews = (articleId) => {
 
 // @route   GET /api/articles
 // @desc    Get all articles with filtering and pagination
-// @access  Public (with optional auth for private articles)
-router.get('/', optionalAuth, (req, res) => {
+// @access  Public
+router.get('/', (req, res) => {
   try {
     // Validate query parameters
     const validatedQuery = articleQuerySchema.parse(req.query);
@@ -108,15 +107,8 @@ router.get('/', optionalAuth, (req, res) => {
       );
     }
 
-    // Filter by visibility (show private articles only to authenticated users)
-    if (!req.user) {
-      filteredArticles = filteredArticles.filter(article => article.visibility === 'public');
-    } else {
-      // Show private articles only to their authors
-      filteredArticles = filteredArticles.filter(article => 
-        article.visibility === 'public' || article.authorId === req.user.userId
-      );
-    }
+    // Show all articles (no visibility restrictions)
+    filteredArticles = filteredArticles.filter(article => article.visibility === 'public');
 
     // Sort articles
     filteredArticles.sort((a, b) => {
@@ -164,8 +156,8 @@ router.get('/', optionalAuth, (req, res) => {
 
 // @route   GET /api/articles/:id
 // @desc    Get article by ID
-// @access  Public (with optional auth for private articles)
-router.get('/:id', optionalAuth, (req, res) => {
+// @access  Public
+router.get('/:id', (req, res) => {
   try {
     // Validate article ID
     const { id } = uuidSchema.parse({ id: req.params.id });
@@ -178,20 +170,8 @@ router.get('/:id', optionalAuth, (req, res) => {
       });
     }
 
-    // Check visibility
-    if (article.visibility === 'private') {
-      if (!req.user || article.authorId !== req.user.userId) {
-        return res.status(403).json({
-          error: 'Access denied',
-          message: 'This article is private'
-        });
-      }
-    }
-
-    // Increment views for public articles
-    if (article.visibility === 'public') {
-      incrementViews(id);
-    }
+    // Increment views for all articles
+    incrementViews(id);
 
     res.json({
       article
@@ -215,8 +195,8 @@ router.get('/:id', optionalAuth, (req, res) => {
 
 // @route   POST /api/articles
 // @desc    Create a new article
-// @access  Private (authenticated users only)
-router.post('/', authenticateToken, (req, res) => {
+// @access  Public
+router.post('/', (req, res) => {
   try {
     // Validate request body
     const validatedData = articleCreateSchema.parse(req.body);
@@ -224,7 +204,7 @@ router.post('/', authenticateToken, (req, res) => {
     // Create new article
     const newArticle = {
       id: uuidv4(),
-      authorId: req.user.userId,
+      authorId: '550e8400-e29b-41d4-a716-446655440000', // Default author ID
       title: validatedData.title,
       content: validatedData.content,
       excerpt: validatedData.excerpt || '',
@@ -262,8 +242,8 @@ router.post('/', authenticateToken, (req, res) => {
 
 // @route   PUT /api/articles/:id
 // @desc    Update an article
-// @access  Private (article author only)
-router.put('/:id', authenticateToken, authorizeResource('authorId'), (req, res) => {
+// @access  Public
+router.put('/:id', (req, res) => {
   try {
     // Validate article ID
     const { id } = uuidSchema.parse({ id: req.params.id });
@@ -277,14 +257,6 @@ router.put('/:id', authenticateToken, authorizeResource('authorId'), (req, res) 
       return res.status(404).json({
         error: 'Article not found',
         message: 'Article does not exist'
-      });
-    }
-
-    // Check if user owns the article
-    if (article.authorId !== req.user.userId) {
-      return res.status(403).json({
-        error: 'Access denied',
-        message: 'You can only edit your own articles'
       });
     }
 
@@ -315,8 +287,8 @@ router.put('/:id', authenticateToken, authorizeResource('authorId'), (req, res) 
 
 // @route   DELETE /api/articles/:id
 // @desc    Delete an article
-// @access  Private (article author only)
-router.delete('/:id', authenticateToken, authorizeResource('authorId'), (req, res) => {
+// @access  Public
+router.delete('/:id', (req, res) => {
   try {
     // Validate article ID
     const { id } = uuidSchema.parse({ id: req.params.id });
@@ -327,14 +299,6 @@ router.delete('/:id', authenticateToken, authorizeResource('authorId'), (req, re
       return res.status(404).json({
         error: 'Article not found',
         message: 'Article does not exist'
-      });
-    }
-
-    // Check if user owns the article
-    if (article.authorId !== req.user.userId) {
-      return res.status(403).json({
-        error: 'Access denied',
-        message: 'You can only delete your own articles'
       });
     }
 
@@ -364,42 +328,20 @@ router.delete('/:id', authenticateToken, authorizeResource('authorId'), (req, re
   }
 });
 
-// @route   GET /api/articles/my/articles
-// @desc    Get current user's articles
-// @access  Private
-router.get('/my/articles', authenticateToken, (req, res) => {
-  try {
-    const userArticles = getArticlesByAuthor(req.user.userId);
-    
-    res.json({
-      articles: userArticles
-    });
-
-  } catch (error) {
-    console.error('Get user articles error:', error);
-    res.status(500).json({
-      error: 'Failed to get user articles',
-      message: 'Internal server error'
-    });
-  }
-});
-
 // @route   GET /api/articles/stats/overview
 // @desc    Get article statistics
-// @access  Private
-router.get('/stats/overview', authenticateToken, (req, res) => {
+// @access  Public
+router.get('/stats/overview', (req, res) => {
   try {
-    const userArticles = getArticlesByAuthor(req.user.userId);
-    
     const stats = {
-      total: userArticles.length,
-      published: userArticles.filter(article => article.status === 'published').length,
-      drafts: userArticles.filter(article => article.status === 'draft').length,
-      public: userArticles.filter(article => article.visibility === 'public').length,
-      private: userArticles.filter(article => article.visibility === 'private').length,
-      totalViews: userArticles.reduce((sum, article) => sum + (article.views || 0), 0),
-      averageViews: userArticles.length > 0 
-        ? Math.round(userArticles.reduce((sum, article) => sum + (article.views || 0), 0) / userArticles.length)
+      total: articles.length,
+      published: articles.filter(article => article.status === 'published').length,
+      drafts: articles.filter(article => article.status === 'draft').length,
+      public: articles.filter(article => article.visibility === 'public').length,
+      private: articles.filter(article => article.visibility === 'private').length,
+      totalViews: articles.reduce((sum, article) => sum + (article.views || 0), 0),
+      averageViews: articles.length > 0 
+        ? Math.round(articles.reduce((sum, article) => sum + (article.views || 0), 0) / articles.length)
         : 0
     };
 
@@ -410,7 +352,7 @@ router.get('/stats/overview', authenticateToken, (req, res) => {
   } catch (error) {
     console.error('Get stats error:', error);
     res.status(500).json({
-      error: 'Failed to get statistics',
+      error: 'Failed to get stats',
       message: 'Internal server error'
     });
   }

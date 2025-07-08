@@ -1,11 +1,14 @@
 const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 
+// Admin user ID constant
+const ADMIN_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
+
 // JWT token validation schema
 const tokenSchema = z.object({
   userId: z.string().uuid(),
   email: z.string().email(),
-  role: z.enum(['user', 'admin']).default('user'),
+  role: z.enum(['admin']).default('admin'),
   iat: z.number(),
   exp: z.number()
 });
@@ -33,6 +36,14 @@ const authenticateToken = (req, res, next) => {
       return res.status(401).json({
         error: 'Token expired',
         message: 'Please login again'
+      });
+    }
+
+    // Only allow admin access
+    if (validatedToken.userId !== ADMIN_USER_ID) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'Only admin can access this resource'
       });
     }
 
@@ -79,7 +90,13 @@ const optionalAuth = (req, res, next) => {
       return next();
     }
 
-    req.user = validatedToken;
+    // Only set user if it's admin
+    if (validatedToken.userId === ADMIN_USER_ID) {
+      req.user = validatedToken;
+    } else {
+      req.user = null;
+    }
+    
     next();
   } catch (error) {
     req.user = null;
@@ -87,28 +104,26 @@ const optionalAuth = (req, res, next) => {
   }
 };
 
-// Role-based authorization middleware
-const authorizeRole = (roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        error: 'Authentication required',
-        message: 'Please login to access this resource'
-      });
-    }
+// Admin-only authorization middleware
+const authorizeAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      error: 'Authentication required',
+      message: 'Please login to access this resource'
+    });
+  }
 
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({
-        error: 'Access denied',
-        message: 'You do not have permission to access this resource'
-      });
-    }
+  if (req.user.userId !== ADMIN_USER_ID) {
+    return res.status(403).json({
+      error: 'Access denied',
+      message: 'Only admin can access this resource'
+    });
+  }
 
-    next();
-  };
+  next();
 };
 
-// Resource ownership middleware
+// Resource ownership middleware (admin owns all resources)
 const authorizeResource = (resourceUserIdField = 'userId') => {
   return (req, res, next) => {
     if (!req.user) {
@@ -119,27 +134,20 @@ const authorizeResource = (resourceUserIdField = 'userId') => {
     }
 
     // Admin can access all resources
-    if (req.user.role === 'admin') {
+    if (req.user.userId === ADMIN_USER_ID) {
       return next();
     }
 
-    // Check if user owns the resource
-    const resourceUserId = req.params[resourceUserIdField] || req.body[resourceUserIdField];
-    
-    if (resourceUserId && resourceUserId !== req.user.userId) {
-      return res.status(403).json({
-        error: 'Access denied',
-        message: 'You can only access your own resources'
-      });
-    }
-
-    next();
+    return res.status(403).json({
+      error: 'Access denied',
+      message: 'Only admin can access this resource'
+    });
   };
 };
 
 module.exports = {
   authenticateToken,
   optionalAuth,
-  authorizeRole,
+  authorizeAdmin,
   authorizeResource
 }; 

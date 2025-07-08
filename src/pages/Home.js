@@ -1,0 +1,316 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { 
+  Shield, 
+  TrendingUp, 
+  FileText, 
+  Users, 
+  ArrowRight,
+  Eye,
+  Heart,
+  MessageCircle
+} from 'lucide-react';
+import { format } from 'date-fns';
+import EmailSubscription from '../components/EmailSubscription';
+
+// Mock data - in real app this would come from your backend
+const featuredArticles = [
+  {
+    id: 1,
+    title: "Advanced Phishing Detection Techniques",
+    excerpt: "Exploring the latest methods to identify and prevent sophisticated phishing attacks that target organizations worldwide...",
+    tags: ["ThreatIntel", "Detection"],
+    publishedAt: new Date('2024-01-15'),
+    views: 1247,
+    likes: 89,
+    comments: 12
+  },
+  {
+    id: 2,
+    title: "Vendor Risk Assessment Framework",
+    excerpt: "A comprehensive guide to evaluating third-party security risks and implementing effective vendor management strategies...",
+    tags: ["VendorRisk", "Compliance"],
+    publishedAt: new Date('2024-01-12'),
+    views: 892,
+    likes: 67,
+    comments: 8
+  },
+  {
+    id: 3,
+    title: "Zero-Day Exploit Analysis",
+    excerpt: "Deep dive into recent zero-day vulnerabilities and mitigation strategies for enterprise environments...",
+    tags: ["ZeroDay", "Analysis"],
+    publishedAt: new Date('2024-01-10'),
+    views: 2156,
+    likes: 156,
+    comments: 23
+  }
+];
+
+const stats = [
+  { label: 'Articles Published', value: '24', icon: FileText },
+  { label: 'Total Views', value: '15.2K', icon: Eye },
+  { label: 'Reader Likes', value: '1.2K', icon: Heart },
+  { label: 'Comments', value: '156', icon: MessageCircle }
+];
+
+const Home = () => {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading data
+    const timer = setTimeout(() => {
+      setArticles(featuredArticles);
+      setLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []); // featuredArticles is now defined outside component
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <div className="text-center">
+            <div className="flex justify-center mb-6">
+              <Shield className="h-16 w-16" />
+            </div>
+            <h1 className="text-5xl font-bold mb-6">
+              CyberScroll Security
+            </h1>
+            <p className="text-xl mb-8 max-w-3xl mx-auto">
+              Professional cybersecurity insights, analysis, and best practices by Francis Bockarie
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                to="/articles"
+                className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+              >
+                Read Articles
+              </Link>
+              <Link
+                to="/contact"
+                className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors"
+              >
+                Contact Francis
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Section */}
+      <div className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Trusted Cybersecurity Resource
+            </h2>
+            <p className="text-lg text-gray-600">
+              Join thousands of security professionals who rely on our insights
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {stats.map((stat, index) => {
+              const Icon = stat.icon;
+              return (
+                <div key={index} className="text-center">
+                  <div className="inline-flex p-4 bg-blue-100 rounded-full mb-4">
+                    <Icon className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <div className="text-3xl font-bold text-gray-900 mb-2">{stat.value}</div>
+                  <div className="text-gray-600">{stat.label}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Featured Articles */}
+      <div className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Featured Articles
+            </h2>
+            <p className="text-lg text-gray-600">
+              Latest insights and analysis from Francis Bockarie
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {articles.map((article) => (
+              <div key={article.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm text-gray-500">
+                      {format(article.publishedAt, 'MMM d, yyyy')}
+                    </span>
+                    <div className="flex space-x-2">
+                      {article.tags.map((tag, index) => (
+                        <span 
+                          key={index}
+                          className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
+                    {article.title}
+                  </h3>
+                  
+                  <p className="text-gray-600 mb-4 line-clamp-3">
+                    {article.excerpt}
+                  </p>
+
+                  <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                    <span className="font-medium text-blue-600">By Francis Bockarie</span>
+                    <div className="flex items-center space-x-4">
+                      <span>👁️ {article.views}</span>
+                      <span>❤️ {article.likes}</span>
+                      <span>💬 {article.comments}</span>
+                    </div>
+                  </div>
+
+                  <Link
+                    to={`/articles/${article.id}`}
+                    className="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Read Article
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mt-12">
+            <Link
+              to="/articles"
+              className="inline-flex items-center space-x-2 bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors border border-blue-200"
+            >
+              <span>View All Articles</span>
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* About Section */}
+      <div className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">
+                About Francis Bockarie
+              </h2>
+              <p className="text-lg text-gray-600 mb-6">
+                IT Security Professional and Cybersecurity Expert with extensive experience in threat intelligence, 
+                incident response, and security architecture.
+              </p>
+              <p className="text-gray-600 mb-8">
+                This blog serves as a platform for sharing professional insights, analysis, and best practices 
+                in cybersecurity. All content is created and curated by Francis Bockarie to help security 
+                professionals stay informed and prepared.
+              </p>
+              <Link
+                to="/contact"
+                className="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              >
+                <span>Get in Touch</span>
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-8">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                What You'll Find Here
+              </h3>
+              <ul className="space-y-3 text-gray-600">
+                <li className="flex items-center space-x-3">
+                  <Shield className="h-5 w-5 text-blue-600" />
+                  <span>Threat intelligence and analysis</span>
+                </li>
+                <li className="flex items-center space-x-3">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                  <span>Security best practices and frameworks</span>
+                </li>
+                <li className="flex items-center space-x-3">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  <span>Incident response strategies</span>
+                </li>
+                <li className="flex items-center space-x-3">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  <span>Vendor risk management insights</span>
+                </li>
+                <li className="flex items-center space-x-3">
+                  <Shield className="h-5 w-5 text-blue-600" />
+                  <span>Professional cybersecurity guidance</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Email Subscription Section */}
+      <div className="py-16 bg-blue-600 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="text-center md:text-left">
+              <h2 className="text-3xl font-bold mb-4">
+                Stay Informed About Cybersecurity
+              </h2>
+              <p className="text-xl mb-6 max-w-2xl">
+                Get the latest insights, analysis, and best practices delivered to your inbox
+              </p>
+              <div className="space-y-4 text-left">
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span>New article notifications</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span>Important security updates</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span>Weekly digest (optional)</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                  <span>Unsubscribe anytime</span>
+                </div>
+              </div>
+            </div>
+            <div className="max-w-md mx-auto">
+              <EmailSubscription 
+                variant="hero"
+                title="Subscribe to Updates"
+                subtitle="Never miss important cybersecurity insights"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Home; 
