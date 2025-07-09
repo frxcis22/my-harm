@@ -410,7 +410,11 @@ const Home = () => {
 
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {articles.map((article) => (
-              <div key={article.id} className="bg-white border border-gray-200 rounded-md p-4 mb-6">
+              <Link 
+                key={article.id} 
+                to={`/articles/${article.id}`}
+                className="block bg-white border border-gray-200 rounded-md p-4 mb-6 hover:shadow-lg transition-shadow cursor-pointer"
+              >
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
                     {article.title}
@@ -428,9 +432,9 @@ const Home = () => {
                       </span>
                     ))}
                   </div>
-                  <div className="flex items-center space-x-6 mt-2">
+                  <div className="flex items-center space-x-6 mt-2" onClick={(e) => e.preventDefault()}>
                     <button
-                      onClick={() => {}}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                       className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors focus:outline-none"
                       aria-label="Like"
                     >
@@ -438,7 +442,7 @@ const Home = () => {
                       <span className="text-sm">{article.likes}</span>
                     </button>
                     <button
-                      onClick={() => {}}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                       className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors focus:outline-none"
                       aria-label="Comments"
                     >
@@ -446,7 +450,7 @@ const Home = () => {
                       <span className="text-sm">{article.comments}</span>
                     </button>
                     <button
-                      onClick={() => handleMinimalShare(article)}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleMinimalShare(article); }}
                       className="flex items-center text-gray-600 hover:text-blue-600 transition-colors focus:outline-none"
                       aria-label="Share"
                     >
@@ -454,7 +458,7 @@ const Home = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 
