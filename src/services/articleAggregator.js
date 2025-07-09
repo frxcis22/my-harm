@@ -1,362 +1,303 @@
-// AI-Powered Cybersecurity Article Aggregator Service
-// This service curates high-quality cybersecurity articles from across the web
-// with proper attribution and source tracking
+// Real-time AI Article Aggregator Service
+import { publicAPI } from './api';
 
-class ArticleAggregatorService {
+// News API configuration (you'll need to get a free API key from newsapi.org)
+const NEWS_API_KEY = process.env.REACT_APP_NEWS_API_KEY || 'your_news_api_key_here';
+const NEWS_API_BASE_URL = 'https://newsapi.org/v2';
+
+// Cybersecurity keywords for better article filtering
+const CYBERSECURITY_KEYWORDS = [
+  'cybersecurity', 'cyber security', 'information security', 'network security',
+  'threat intelligence', 'malware', 'ransomware', 'phishing', 'data breach',
+  'vulnerability', 'zero-day', 'penetration testing', 'incident response',
+  'security framework', 'compliance', 'GDPR', 'HIPAA', 'ISO 27001',
+  'vendor risk', 'third-party risk', 'supply chain security', 'cloud security',
+  'endpoint security', 'SIEM', 'EDR', 'XDR', 'SOC', 'threat hunting'
+];
+
+class ArticleAggregator {
   constructor() {
-    this.curatedArticles = [];
-    this.sources = [
+    this.cache = new Map();
+    this.cacheTimeout = 30 * 60 * 1000; // 30 minutes
+  }
+
+  // Search for real-time articles from the web
+  async searchRealTimeArticles(query, filters = {}) {
+    try {
+      const cacheKey = `search_${query}_${JSON.stringify(filters)}`;
+      
+      // Check cache first
+      if (this.cache.has(cacheKey)) {
+        const cached = this.cache.get(cacheKey);
+        if (Date.now() - cached.timestamp < this.cacheTimeout) {
+          return cached.data;
+        }
+      }
+
+      // Build search query with cybersecurity context
+      const searchQuery = this.buildSearchQuery(query, filters);
+      
+      // Fetch from News API
+      const response = await fetch(
+        `${NEWS_API_BASE_URL}/everything?${new URLSearchParams({
+          q: searchQuery,
+          language: 'en',
+          sortBy: 'publishedAt',
+          pageSize: 20,
+          apiKey: NEWS_API_KEY
+        })}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`News API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.status !== 'ok') {
+        throw new Error(`News API error: ${data.message}`);
+      }
+
+      // Process and filter articles
+      const processedArticles = this.processArticles(data.articles, query);
+      
+      // Cache the results
+      this.cache.set(cacheKey, {
+        data: processedArticles,
+        timestamp: Date.now()
+      });
+
+      return processedArticles;
+    } catch (error) {
+      console.error('Error searching real-time articles:', error);
+      
+      // Fallback to mock data if API fails
+      return this.getMockArticles(query);
+    }
+  }
+
+  // Build optimized search query
+  buildSearchQuery(query, filters) {
+    let searchQuery = query;
+    
+    // Add cybersecurity context if not already present
+    const hasSecurityContext = CYBERSECURITY_KEYWORDS.some(keyword => 
+      query.toLowerCase().includes(keyword.toLowerCase())
+    );
+    
+    if (!hasSecurityContext) {
+      searchQuery = `(${query}) AND (cybersecurity OR "cyber security" OR "information security")`;
+    }
+
+    // Add date filter if specified
+    if (filters.dateRange) {
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - filters.dateRange);
+      searchQuery += ` AND publishedAt:${fromDate.toISOString().split('T')[0]}`;
+    }
+
+    return searchQuery;
+  }
+
+  // Process and filter articles from API
+  processArticles(articles, originalQuery) {
+    return articles
+      .filter(article => this.isRelevantArticle(article, originalQuery))
+      .map(article => this.transformArticle(article))
+      .slice(0, 10); // Limit to top 10 most relevant
+  }
+
+  // Check if article is relevant to cybersecurity
+  isRelevantArticle(article, query) {
+    const content = `${article.title} ${article.description} ${article.content}`.toLowerCase();
+    const queryLower = query.toLowerCase();
+    
+    // Must contain query terms
+    const hasQueryTerms = queryLower.split(' ').some(term => 
+      content.includes(term.toLowerCase())
+    );
+    
+    // Must have cybersecurity context
+    const hasSecurityContext = CYBERSECURITY_KEYWORDS.some(keyword => 
+      content.includes(keyword.toLowerCase())
+    );
+    
+    // Must have sufficient content
+    const hasContent = article.title && article.description && 
+                      article.title.length > 10 && 
+                      article.description.length > 50;
+    
+    return hasQueryTerms && hasSecurityContext && hasContent;
+  }
+
+  // Transform API article to our format
+  transformArticle(article) {
+    return {
+      id: `curated_${article.url.hashCode()}`,
+      title: article.title,
+      excerpt: article.description || article.content?.substring(0, 200) + '...',
+      content: article.content,
+      sourceUrl: article.url,
+      sourceName: article.source.name,
+      publishedAt: article.publishedAt,
+      imageUrl: article.urlToImage,
+      tags: this.extractTags(article),
+      likeCount: Math.floor(Math.random() * 50) + 5, // Random initial likes
+      commentCount: Math.floor(Math.random() * 20) + 1, // Random initial comments
+      viewCount: Math.floor(Math.random() * 500) + 100, // Random initial views
+      isCurated: true,
+      isRealTime: true,
+      searchQuery: article.searchQuery || '',
+      relevanceScore: this.calculateRelevanceScore(article)
+    };
+  }
+
+  // Extract tags from article content
+  extractTags(article) {
+    const content = `${article.title} ${article.description}`.toLowerCase();
+    const tags = [];
+    
+    // Extract relevant cybersecurity tags
+    const tagKeywords = {
+      'ThreatIntel': ['threat', 'intelligence', 'malware', 'ransomware'],
+      'VendorRisk': ['vendor', 'third-party', 'supply chain'],
+      'Compliance': ['compliance', 'gdpr', 'hipaa', 'iso'],
+      'IncidentResponse': ['incident', 'response', 'breach'],
+      'NetworkSecurity': ['network', 'firewall', 'vpn'],
+      'CloudSecurity': ['cloud', 'aws', 'azure', 'gcp'],
+      'EndpointSecurity': ['endpoint', 'antivirus', 'edr'],
+      'ZeroDay': ['zero-day', 'vulnerability', 'exploit'],
+      'Phishing': ['phishing', 'social engineering'],
+      'DataProtection': ['data', 'privacy', 'protection']
+    };
+    
+    Object.entries(tagKeywords).forEach(([tag, keywords]) => {
+      if (keywords.some(keyword => content.includes(keyword))) {
+        tags.push(tag);
+      }
+    });
+    
+    return tags.slice(0, 3); // Limit to 3 tags
+  }
+
+  // Calculate relevance score for ranking
+  calculateRelevanceScore(article) {
+    let score = 0;
+    const content = `${article.title} ${article.description}`.toLowerCase();
+    
+    // Higher score for more recent articles
+    const daysOld = (Date.now() - new Date(article.publishedAt).getTime()) / (1000 * 60 * 60 * 24);
+    score += Math.max(0, 10 - daysOld);
+    
+    // Higher score for reputable sources
+    const reputableSources = ['reuters', 'bloomberg', 'techcrunch', 'zdnet', 'securityweek', 'threatpost'];
+    if (reputableSources.some(source => article.source.name.toLowerCase().includes(source))) {
+      score += 5;
+    }
+    
+    // Higher score for cybersecurity-focused content
+    const securityTerms = CYBERSECURITY_KEYWORDS.filter(keyword => 
+      content.includes(keyword.toLowerCase())
+    );
+    score += securityTerms.length * 2;
+    
+    return score;
+  }
+
+  // Get featured articles (combination of original and popular curated)
+  async getFeaturedArticles() {
+    try {
+      // Get original articles
+      const originalArticles = await publicAPI.getArticles();
+      
+      // Get popular curated articles (you could implement a popularity algorithm)
+      const popularCurated = await this.getPopularCuratedArticles();
+      
+      // Combine and sort by relevance/popularity
+      const allArticles = [...originalArticles.articles, ...popularCurated];
+      
+      return allArticles
+        .sort((a, b) => {
+          // Original articles get priority
+          if (!a.isCurated && b.isCurated) return -1;
+          if (a.isCurated && !b.isCurated) return 1;
+          
+          // Then sort by like count and relevance
+          const scoreA = (a.likeCount || 0) + (a.relevanceScore || 0);
+          const scoreB = (b.likeCount || 0) + (b.relevanceScore || 0);
+          return scoreB - scoreA;
+        })
+        .slice(0, 6); // Top 6 featured articles
+    } catch (error) {
+      console.error('Error getting featured articles:', error);
+      return [];
+    }
+  }
+
+  // Get popular curated articles (simplified version)
+  async getPopularCuratedArticles() {
+    // In a real implementation, this would query your database
+    // for articles with high engagement (likes, comments, shares)
+    return [];
+  }
+
+  // Mock data fallback
+  getMockArticles(query) {
+    const mockArticles = [
       {
-        name: 'KrebsOnSecurity',
-        url: 'https://krebsonsecurity.com',
-        rss: 'https://krebsonsecurity.com/feed/',
-        category: 'cybersecurity'
+        id: `mock_${Date.now()}_1`,
+        title: `Latest ${query} Trends in Cybersecurity`,
+        excerpt: `Recent developments in ${query} have shown significant changes in how organizations approach security...`,
+        sourceUrl: 'https://example.com/article1',
+        sourceName: 'Security Weekly',
+        publishedAt: new Date().toISOString(),
+        tags: ['ThreatIntel', 'Analysis'],
+        likeCount: 45,
+        commentCount: 12,
+        viewCount: 1200,
+        isCurated: true,
+        isRealTime: false
       },
       {
-        name: 'Schneier on Security',
-        url: 'https://www.schneier.com',
-        rss: 'https://www.schneier.com/feed/',
-        category: 'cybersecurity'
-      },
-      {
-        name: 'The Hacker News',
-        url: 'https://thehackernews.com',
-        rss: 'https://feeds.feedburner.com/TheHackersNews',
-        category: 'cybersecurity'
-      },
-      {
-        name: 'Dark Reading',
-        url: 'https://www.darkreading.com',
-        rss: 'https://www.darkreading.com/rss.xml',
-        category: 'cybersecurity'
-      },
-      {
-        name: 'Security Week',
-        url: 'https://www.securityweek.com',
-        rss: 'https://www.securityweek.com/feed/',
-        category: 'cybersecurity'
-      },
-      {
-        name: 'CSO Online',
-        url: 'https://www.csoonline.com',
-        rss: 'https://www.csoonline.com/index.rss',
-        category: 'cybersecurity'
-      },
-      {
-        name: 'Infosecurity Magazine',
-        url: 'https://www.infosecurity-magazine.com',
-        rss: 'https://www.infosecurity-magazine.com/rss/news/',
-        category: 'cybersecurity'
-      },
-      {
-        name: 'Threatpost',
-        url: 'https://threatpost.com',
-        rss: 'https://threatpost.com/feed/',
-        category: 'cybersecurity'
+        id: `mock_${Date.now()}_2`,
+        title: `${query} Best Practices for 2024`,
+        excerpt: `As ${query} continues to evolve, organizations must adapt their security strategies...`,
+        sourceUrl: 'https://example.com/article2',
+        sourceName: 'Cyber Defense Magazine',
+        publishedAt: new Date(Date.now() - 86400000).toISOString(),
+        tags: ['BestPractices', 'Guidance'],
+        likeCount: 32,
+        commentCount: 8,
+        viewCount: 890,
+        isCurated: true,
+        isRealTime: false
       }
     ];
+    
+    return mockArticles;
   }
 
-  // Simulate AI-powered article curation
+  // Legacy method for backward compatibility
   async curateArticles() {
-    try {
-      // In a real implementation, this would:
-      // 1. Fetch RSS feeds from cybersecurity sources
-      // 2. Use AI to analyze and filter articles
-      // 3. Extract key information and create summaries
-      // 4. Store in database with proper attribution
-      
-      // For now, we'll simulate curated articles with realistic data
-      const mockCuratedArticles = [
-        {
-          id: 'curated_001',
-          title: 'New Zero-Day Vulnerability Affects Millions of IoT Devices',
-          excerpt: 'Security researchers have discovered a critical zero-day vulnerability affecting over 50 million IoT devices worldwide. The flaw allows remote code execution and has been actively exploited in the wild.',
-          content: 'A critical zero-day vulnerability has been discovered affecting millions of Internet of Things (IoT) devices globally. The vulnerability, tracked as CVE-2024-XXXX, allows attackers to execute arbitrary code remotely without authentication...',
-          author: 'Security Research Team',
-          source: 'The Hacker News',
-          sourceUrl: 'https://thehackernews.com/2024/01/zero-day-iot-vulnerability.html',
-          publishedAt: '2024-01-15T10:30:00Z',
-          tags: ['Zero-Day', 'IoT Security', 'Vulnerability', 'Critical'],
-          category: 'cybersecurity',
-          readTime: '5 min read',
-          isCurated: true,
-          viewCount: 15420,
-          likeCount: 892,
-          commentCount: 156,
-          imageUrl: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=400&h=200&fit=crop',
-          difficulty: 'Intermediate',
-          relevanceScore: 0.95
-        },
-        {
-          id: 'curated_002',
-          title: 'Ransomware Attacks Increase 150% in Q4 2023',
-          excerpt: 'New cybersecurity report reveals alarming spike in ransomware attacks during the final quarter of 2023, with healthcare and education sectors being primary targets.',
-          content: 'A comprehensive cybersecurity report released today shows a dramatic 150% increase in ransomware attacks during the fourth quarter of 2023 compared to the previous quarter...',
-          author: 'Cybersecurity Analytics Team',
-          source: 'Dark Reading',
-          sourceUrl: 'https://www.darkreading.com/ransomware/ransomware-attacks-increase-2023',
-          publishedAt: '2024-01-14T14:15:00Z',
-          tags: ['Ransomware', 'Threat Intelligence', 'Healthcare', 'Education'],
-          category: 'cybersecurity',
-          readTime: '7 min read',
-          isCurated: true,
-          viewCount: 12340,
-          likeCount: 756,
-          commentCount: 89,
-          imageUrl: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&h=200&fit=crop',
-          difficulty: 'Beginner',
-          relevanceScore: 0.92
-        },
-        {
-          id: 'curated_003',
-          title: 'AI-Powered Phishing Detection Shows 99.7% Accuracy',
-          excerpt: 'New machine learning algorithm demonstrates exceptional accuracy in detecting sophisticated phishing attempts, potentially revolutionizing email security.',
-          content: 'Researchers have developed a new artificial intelligence system that can detect phishing emails with 99.7% accuracy, significantly outperforming traditional rule-based systems...',
-          author: 'AI Security Research Lab',
-          source: 'Security Week',
-          sourceUrl: 'https://www.securityweek.com/ai-phishing-detection-accuracy',
-          publishedAt: '2024-01-13T09:45:00Z',
-          tags: ['AI Security', 'Phishing', 'Machine Learning', 'Email Security'],
-          category: 'cybersecurity',
-          readTime: '6 min read',
-          isCurated: true,
-          viewCount: 9876,
-          likeCount: 634,
-          commentCount: 123,
-          imageUrl: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=200&fit=crop',
-          difficulty: 'Advanced',
-          relevanceScore: 0.88
-        },
-        {
-          id: 'curated_004',
-          title: 'Supply Chain Attack Targets Popular Open Source Libraries',
-          excerpt: 'Security researchers uncover sophisticated supply chain attack affecting multiple popular JavaScript and Python libraries used by millions of developers.',
-          content: 'A sophisticated supply chain attack has been discovered targeting popular open source libraries in the JavaScript and Python ecosystems. The attack, which has been active for several months...',
-          author: 'Open Source Security Team',
-          source: 'KrebsOnSecurity',
-          sourceUrl: 'https://krebsonsecurity.com/supply-chain-attack-open-source',
-          publishedAt: '2024-01-12T16:20:00Z',
-          tags: ['Supply Chain', 'Open Source', 'JavaScript', 'Python', 'Malware'],
-          category: 'cybersecurity',
-          readTime: '8 min read',
-          isCurated: true,
-          viewCount: 11234,
-          likeCount: 789,
-          commentCount: 234,
-          imageUrl: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&h=200&fit=crop',
-          difficulty: 'Intermediate',
-          relevanceScore: 0.94
-        },
-        {
-          id: 'curated_005',
-          title: 'Quantum Computing Threat to Current Encryption Standards',
-          excerpt: 'As quantum computing advances, cybersecurity experts warn about the urgent need to develop quantum-resistant encryption algorithms.',
-          content: 'The rapid advancement of quantum computing technology has raised serious concerns about the future of current encryption standards. Cybersecurity experts are warning that widely-used encryption algorithms...',
-          author: 'Quantum Security Research Group',
-          source: 'Schneier on Security',
-          sourceUrl: 'https://www.schneier.com/quantum-computing-encryption-threat',
-          publishedAt: '2024-01-11T11:30:00Z',
-          tags: ['Quantum Computing', 'Encryption', 'Cryptography', 'Future Security'],
-          category: 'cybersecurity',
-          readTime: '10 min read',
-          isCurated: true,
-          viewCount: 8765,
-          likeCount: 567,
-          commentCount: 178,
-          imageUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=200&fit=crop',
-          difficulty: 'Advanced',
-          relevanceScore: 0.91
-        },
-        {
-          id: 'curated_006',
-          title: 'New Cybersecurity Framework for Small Businesses',
-          excerpt: 'NIST releases updated cybersecurity framework specifically designed for small and medium-sized businesses with limited IT resources.',
-          content: 'The National Institute of Standards and Technology (NIST) has released an updated cybersecurity framework specifically designed for small and medium-sized businesses...',
-          author: 'NIST Cybersecurity Team',
-          source: 'CSO Online',
-          sourceUrl: 'https://www.csoonline.com/nist-cybersecurity-framework-smb',
-          publishedAt: '2024-01-10T13:45:00Z',
-          tags: ['NIST', 'SMB Security', 'Framework', 'Best Practices'],
-          category: 'cybersecurity',
-          readTime: '4 min read',
-          isCurated: true,
-          viewCount: 6543,
-          likeCount: 432,
-          commentCount: 67,
-          imageUrl: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=200&fit=crop',
-          difficulty: 'Beginner',
-          relevanceScore: 0.87
-        }
-      ];
-
-      // Simulate AI processing delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      this.curatedArticles = mockCuratedArticles;
-      return mockCuratedArticles;
-    } catch (error) {
-      console.error('Error curating articles:', error);
-      throw new Error('Failed to curate articles');
-    }
+    return this.getMockArticles('cybersecurity');
   }
 
-  // Search curated articles with AI-powered relevance scoring
+  // Legacy search method
   async searchCuratedArticles(query, filters = {}) {
-    try {
-      const articles = await this.curateArticles();
-      
-      if (!query && Object.keys(filters).length === 0) {
-        return articles;
-      }
-
-      // Simulate AI-powered search with relevance scoring
-      const searchResults = articles.filter(article => {
-        let matches = true;
-
-        // Text search
-        if (query) {
-          const searchTerms = query.toLowerCase().split(' ');
-          const articleText = `${article.title} ${article.excerpt} ${article.tags.join(' ')}`.toLowerCase();
-          
-          matches = searchTerms.every(term => articleText.includes(term));
-        }
-
-        // Category filter
-        if (filters.category && filters.category !== 'all') {
-          matches = matches && article.category === filters.category;
-        }
-
-        // Difficulty filter
-        if (filters.difficulty && filters.difficulty !== 'all') {
-          matches = matches && article.difficulty === filters.difficulty;
-        }
-
-        // Date range filter
-        if (filters.dateRange) {
-          const articleDate = new Date(article.publishedAt);
-          const now = new Date();
-          const daysDiff = (now - articleDate) / (1000 * 60 * 60 * 24);
-          
-          switch (filters.dateRange) {
-            case 'today':
-              matches = matches && daysDiff <= 1;
-              break;
-            case 'week':
-              matches = matches && daysDiff <= 7;
-              break;
-            case 'month':
-              matches = matches && daysDiff <= 30;
-              break;
-            case 'year':
-              matches = matches && daysDiff <= 365;
-              break;
-            default:
-              break;
-          }
-        }
-
-        return matches;
-      });
-
-      // Sort by relevance score (in real implementation, this would be AI-calculated)
-      return searchResults.sort((a, b) => b.relevanceScore - a.relevanceScore);
-    } catch (error) {
-      console.error('Error searching curated articles:', error);
-      throw new Error('Failed to search articles');
-    }
-  }
-
-  // Get article recommendations based on user preferences
-  async getRecommendations(userPreferences = {}) {
-    try {
-      const articles = await this.curateArticles();
-      
-      // Simulate AI-powered recommendation algorithm
-      let recommendations = articles;
-
-      // Filter by user preferences
-      if (userPreferences.categories && userPreferences.categories.length > 0) {
-        recommendations = recommendations.filter(article => 
-          userPreferences.categories.includes(article.category)
-        );
-      }
-
-      if (userPreferences.difficulty) {
-        recommendations = recommendations.filter(article => 
-          article.difficulty === userPreferences.difficulty
-        );
-      }
-
-      // Sort by relevance and recency
-      recommendations.sort((a, b) => {
-        const relevanceDiff = b.relevanceScore - a.relevanceScore;
-        if (Math.abs(relevanceDiff) > 0.1) {
-          return relevanceDiff;
-        }
-        return new Date(b.publishedAt) - new Date(a.publishedAt);
-      });
-
-      return recommendations.slice(0, 10); // Return top 10 recommendations
-    } catch (error) {
-      console.error('Error getting recommendations:', error);
-      throw new Error('Failed to get recommendations');
-    }
-  }
-
-  // Get trending articles based on engagement metrics
-  async getTrendingArticles() {
-    try {
-      const articles = await this.curateArticles();
-      
-      // Calculate trending score based on views, likes, and recency
-      const trendingArticles = articles.map(article => {
-        const daysSincePublished = (new Date() - new Date(article.publishedAt)) / (1000 * 60 * 60 * 24);
-        const trendingScore = (article.viewCount + article.likeCount * 2) / Math.max(daysSincePublished, 1);
-        
-        return {
-          ...article,
-          trendingScore
-        };
-      });
-
-      return trendingArticles
-        .sort((a, b) => b.trendingScore - a.trendingScore)
-        .slice(0, 5); // Return top 5 trending articles
-    } catch (error) {
-      console.error('Error getting trending articles:', error);
-      throw new Error('Failed to get trending articles');
-    }
-  }
-
-  // Get source statistics
-  async getSourceStats() {
-    try {
-      const articles = await this.curateArticles();
-      
-      const stats = {};
-      articles.forEach(article => {
-        if (!stats[article.source]) {
-          stats[article.source] = {
-            count: 0,
-            totalViews: 0,
-            totalLikes: 0
-          };
-        }
-        stats[article.source].count++;
-        stats[article.source].totalViews += article.viewCount;
-        stats[article.source].totalLikes += article.likeCount;
-      });
-
-      return stats;
-    } catch (error) {
-      console.error('Error getting source stats:', error);
-      throw new Error('Failed to get source statistics');
-    }
+    return this.searchRealTimeArticles(query, filters);
   }
 }
 
-// Create singleton instance
-const articleAggregator = new ArticleAggregatorService();
+// Helper function to generate hash code
+String.prototype.hashCode = function() {
+  let hash = 0;
+  if (this.length === 0) return hash;
+  for (let i = 0; i < this.length; i++) {
+    const char = this.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+};
 
-export default articleAggregator; 
+export default new ArticleAggregator(); 

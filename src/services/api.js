@@ -159,7 +159,26 @@ export const publicAPI = {
     return apiRequest(`/public/articles?${queryString}`);
   },
 
+  getFeaturedArticles: async () => {
+    return apiRequest('/public/articles/featured');
+  },
+
+  getCuratedArticles: async () => {
+    return apiRequest('/public/articles/curated');
+  },
+
+  searchRealTimeArticles: async (query, filters = {}) => {
+    return apiRequest('/public/articles/search', {
+      method: 'POST',
+      body: JSON.stringify({ query, filters })
+    });
+  },
+
   getArticle: async (id) => {
+    return apiRequest(`/public/articles/${id}`);
+  },
+
+  getCuratedArticle: async (id) => {
     return apiRequest(`/public/articles/${id}`);
   },
 
@@ -174,9 +193,10 @@ export const publicAPI = {
     });
   },
 
-  likeArticle: async (articleId) => {
+  likeArticle: async (articleId, visitorId) => {
     return apiRequest(`/public/articles/${articleId}/like`, {
       method: 'POST',
+      body: JSON.stringify({ visitorId })
     });
   },
 
@@ -185,6 +205,10 @@ export const publicAPI = {
       method: 'POST',
       body: JSON.stringify(shareData),
     });
+  },
+
+  getArticleEngagement: async (articleId) => {
+    return apiRequest(`/public/articles/${articleId}/engagement`);
   },
 
   sendMessage: async (messageData) => {

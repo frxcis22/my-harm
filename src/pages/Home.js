@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Shield, 
@@ -8,10 +8,36 @@ import {
   ArrowRight,
   Eye,
   Heart,
-  MessageCircle
+  MessageCircle,
+  Lock,
+  Key,
+  Bug,
+  Network,
+  Database,
+  Code,
+  AlertTriangle,
+  ThumbsUp,
+  Share2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import EmailSubscription from '../components/EmailSubscription';
+import { publicAPI } from '../services/api';
+import toast from 'react-hot-toast';
+
+// Security terms for the bubbles
+const securityTerms = [
+  'Firewall', 'Encryption', 'Malware', 'Phishing', 'Ransomware', 'Zero-Day',
+  'Penetration Testing', 'SOC', 'SIEM', 'EDR', 'XDR', 'Threat Intelligence',
+  'Vulnerability Assessment', 'Incident Response', 'Digital Forensics', 'Compliance',
+  'GDPR', 'HIPAA', 'ISO 27001', 'NIST', 'OWASP', 'MITRE ATT&CK', 'CVE', 'CWE',
+  'Authentication', 'Authorization', 'Multi-Factor', 'Biometrics', 'PKI',
+  'Network Security', 'Endpoint Security', 'Cloud Security', 'Data Protection'
+];
+
+// Security icons for bubbles
+const securityIcons = [
+  Shield, Lock, Eye, Key, Bug, Network, Database, Code, AlertTriangle
+];
 
 // Mock data - in real app this would come from your backend
 const featuredArticles = [
@@ -57,16 +83,202 @@ const stats = [
 const Home = () => {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [bubbles, setBubbles] = useState([]);
+  const [subscriptionBubbles, setSubscriptionBubbles] = useState([]);
+  const animationRef = useRef();
+  const subscriptionAnimationRef = useRef();
+
+  // Initialize animated bubbles
+  useEffect(() => {
+    const createBubbles = () => {
+      const newBubbles = Array.from({ length: 12 }, (_, index) => {
+        const IconComponent = securityIcons[Math.floor(Math.random() * securityIcons.length)];
+        const term = securityTerms[Math.floor(Math.random() * securityTerms.length)];
+        return {
+          id: index,
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          size: Math.random() * 20 + 15,
+          speed: Math.random() * 0.5 + 0.2,
+          direction: Math.random() * 360,
+          opacity: Math.random() * 0.3 + 0.1,
+          term,
+          icon: IconComponent,
+          color: (() => {
+            const colors = [
+              'hsl(200, 70%, 60%)',  // Blue
+              'hsl(220, 80%, 65%)',  // Darker blue
+              'hsl(180, 75%, 55%)',  // Cyan
+              'hsl(160, 70%, 50%)',  // Teal
+              'hsl(140, 65%, 55%)',  // Green-blue
+              'hsl(120, 60%, 50%)',  // Green
+              'hsl(280, 70%, 65%)',  // Purple
+              'hsl(300, 75%, 60%)',  // Magenta
+              'hsl(320, 80%, 65%)',  // Pink
+              'hsl(340, 75%, 60%)',  // Rose
+              'hsl(0, 70%, 65%)',    // Red
+              'hsl(30, 80%, 60%)',   // Orange
+              'hsl(45, 85%, 55%)',   // Yellow-orange
+              'hsl(60, 80%, 50%)'    // Yellow
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+          })()
+        };
+      });
+      setBubbles(newBubbles);
+    };
+
+    createBubbles();
+  }, []);
+
+  // Initialize subscription bubbles with traffic-like movement
+  useEffect(() => {
+    const createSubscriptionBubbles = () => {
+      const newBubbles = Array.from({ length: 12 }, (_, index) => {
+        const IconComponent = securityIcons[Math.floor(Math.random() * securityIcons.length)];
+        const term = securityTerms[Math.floor(Math.random() * securityTerms.length)];
+        const lane = index % 4; // 4 traffic lanes
+        const isUpward = lane < 2; // First 2 lanes go up, last 2 go down
+        
+        return {
+          id: `subscription-${index}`,
+          x: lane * 25 + 12.5, // 4 lanes, evenly spaced
+          y: isUpward ? Math.random() * 50 + 50 : Math.random() * 50, // Start from appropriate end
+          size: Math.random() * 8 + 8, // Smaller, more uniform size
+          speed: 0.4 + (Math.random() * 0.2), // Consistent speed with slight variation
+          direction: isUpward ? 270 : 90, // Up or down based on lane
+          opacity: 0.3 + (Math.random() * 0.3),
+          term,
+          icon: IconComponent,
+          color: (() => {
+            const colors = [
+              'hsl(200, 70%, 60%)',  // Blue
+              'hsl(220, 80%, 65%)',  // Darker blue
+              'hsl(180, 75%, 55%)',  // Cyan
+              'hsl(160, 70%, 50%)',  // Teal
+              'hsl(140, 65%, 55%)',  // Green-blue
+              'hsl(120, 60%, 50%)',  // Green
+              'hsl(280, 70%, 65%)',  // Purple
+              'hsl(300, 75%, 60%)',  // Magenta
+              'hsl(320, 80%, 65%)',  // Pink
+              'hsl(340, 75%, 60%)',  // Rose
+              'hsl(0, 70%, 65%)',    // Red
+              'hsl(30, 80%, 60%)',   // Orange
+              'hsl(45, 85%, 55%)',   // Yellow-orange
+              'hsl(60, 80%, 50%)'    // Yellow
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+          })(),
+          lane: lane
+        };
+      });
+      setSubscriptionBubbles(newBubbles);
+    };
+
+    createSubscriptionBubbles();
+  }, []);
+
+  // Animate subscription bubbles with traffic-like flow
+  useEffect(() => {
+    const animateSubscriptionBubbles = () => {
+      setSubscriptionBubbles(prevBubbles => 
+        prevBubbles.map(bubble => {
+          // Calculate new position (vertical movement only)
+          const radians = (bubble.direction * Math.PI) / 180;
+          let newY = bubble.y + Math.sin(radians) * bubble.speed;
+
+          // Traffic-like flow - maintain lane direction and wrap around
+          if (bubble.lane < 2) {
+            // Upward lanes (lanes 0 and 1)
+            if (newY <= -10) {
+              newY = 110; // Wrap to bottom
+            }
+          } else {
+            // Downward lanes (lanes 2 and 3)
+            if (newY >= 110) {
+              newY = -10; // Wrap to top
+            }
+          }
+
+          return {
+            ...bubble,
+            y: newY
+          };
+        })
+      );
+    };
+
+    const interval = setInterval(animateSubscriptionBubbles, 25); // Smooth traffic flow
+    subscriptionAnimationRef.current = interval;
+
+    return () => {
+      if (subscriptionAnimationRef.current) {
+        clearInterval(subscriptionAnimationRef.current);
+      }
+    };
+  }, []);
+
+  // Animate bubbles
+  useEffect(() => {
+    const animateBubbles = () => {
+      setBubbles(prevBubbles => 
+        prevBubbles.map(bubble => {
+          // Calculate new position
+          const radians = (bubble.direction * Math.PI) / 180;
+          let newX = bubble.x + Math.cos(radians) * bubble.speed;
+          let newY = bubble.y + Math.sin(radians) * bubble.speed;
+          let newDirection = bubble.direction;
+
+          // Continuous movement - wrap around instead of bouncing
+          if (newX <= -10) {
+            newX = 110; // Wrap to right
+          } else if (newX >= 110) {
+            newX = -10; // Wrap to left
+          }
+          if (newY <= -10) {
+            newY = 110; // Wrap to bottom
+          } else if (newY >= 110) {
+            newY = -10; // Wrap to top
+          }
+
+          return {
+            ...bubble,
+            x: newX,
+            y: newY,
+            direction: newDirection
+          };
+        })
+      );
+    };
+
+    const interval = setInterval(animateBubbles, 30); // Faster animation
+    animationRef.current = interval;
+
+    return () => {
+      if (animationRef.current) {
+        clearInterval(animationRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setArticles(featuredArticles);
-      setLoading(false);
-    }, 1000);
+    // Fetch featured articles from API
+    const fetchFeaturedArticles = async () => {
+      try {
+        setLoading(true);
+        const response = await publicAPI.getFeaturedArticles();
+        setArticles(response.articles);
+      } catch (error) {
+        console.error('Error fetching featured articles:', error);
+        // Fallback to mock data
+        setArticles(featuredArticles);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => clearTimeout(timer);
-  }, []); // featuredArticles is now defined outside component
+    fetchFeaturedArticles();
+  }, []);
 
   if (loading) {
     return (
@@ -79,11 +291,54 @@ const Home = () => {
     );
   }
 
+  const handleMinimalShare = (article) => {
+    const shareUrl = window.location.origin + `/articles/${article.id}`;
+    const shareText = `Check out this article: ${article.title}`;
+    if (navigator.share) {
+      navigator.share({
+        title: article.title,
+        text: shareText,
+        url: shareUrl
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      toast.success('Link copied to clipboard!');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="bg-blue-600 text-white relative overflow-hidden">
+        {/* Animated Bubbles */}
+        <div className="absolute inset-0 pointer-events-none">
+          {bubbles.map((bubble) => {
+            const IconComponent = bubble.icon;
+            if (!IconComponent) return null;
+            
+            return (
+              <div
+                key={bubble.id}
+                className="absolute rounded-full flex items-center justify-center text-white font-medium text-xs shadow-lg backdrop-blur-sm border border-white/20"
+                style={{
+                  left: `${bubble.x}%`,
+                  top: `${bubble.y}%`,
+                  width: `${bubble.size}px`,
+                  height: `${bubble.size}px`,
+                  opacity: bubble.opacity,
+                  backgroundColor: bubble.color,
+                  transform: 'translate(-50%, -50%)',
+                  transition: 'all 0.1s ease-out'
+                }}
+                title={bubble.term}
+              >
+                <IconComponent className="w-3 h-3" />
+              </div>
+            );
+          })}
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
           <div className="text-center">
             <div className="flex justify-center mb-6">
               <Shield className="h-16 w-16" />
@@ -92,7 +347,7 @@ const Home = () => {
               CyberScroll Security
             </h1>
             <p className="text-xl mb-8 max-w-3xl mx-auto">
-              Professional cybersecurity insights, analysis, and best practices by Francis Bockarie
+              Professional cybersecurity insights, analysis, and best practices
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -155,47 +410,49 @@ const Home = () => {
 
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {articles.map((article) => (
-              <div key={article.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm text-gray-500">
-                      {format(article.publishedAt, 'MMM d, yyyy')}
-                    </span>
-                    <div className="flex space-x-2">
-                      {article.tags.map((tag, index) => (
-                        <span 
-                          key={index}
-                          className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
+              <div key={article.id} className="bg-white border border-gray-200 rounded-md p-4 mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
                     {article.title}
                   </h3>
-                  
-                  <p className="text-gray-600 mb-4 line-clamp-3">
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-3">
                     {article.excerpt}
                   </p>
-
-                  <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                    <span className="font-medium text-blue-600">By Francis Bockarie</span>
-                    <div className="flex items-center space-x-4">
-                      <span>👁️ {article.views}</span>
-                      <span>❤️ {article.likes}</span>
-                      <span>💬 {article.comments}</span>
-                    </div>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {article.tags.map((tag, index) => (
+                      <span 
+                        key={index}
+                        className="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 rounded"
+                      >
+                        {tag}
+                      </span>
+                    ))}
                   </div>
-
-                  <Link
-                    to={`/articles/${article.id}`}
-                    className="block w-full bg-blue-600 text-white text-center py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Read Article
-                  </Link>
+                  <div className="flex items-center space-x-6 mt-2">
+                    <button
+                      onClick={() => {}}
+                      className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors focus:outline-none"
+                      aria-label="Like"
+                    >
+                      <ThumbsUp className="w-6 h-6" strokeWidth={2} />
+                      <span className="text-sm">{article.likes}</span>
+                    </button>
+                    <button
+                      onClick={() => {}}
+                      className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors focus:outline-none"
+                      aria-label="Comments"
+                    >
+                      <MessageCircle className="w-6 h-6" strokeWidth={2} />
+                      <span className="text-sm">{article.comments}</span>
+                    </button>
+                    <button
+                      onClick={() => handleMinimalShare(article)}
+                      className="flex items-center text-gray-600 hover:text-blue-600 transition-colors focus:outline-none"
+                      aria-label="Share"
+                    >
+                      <Share2 className="w-6 h-6" strokeWidth={2} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -270,8 +527,36 @@ const Home = () => {
       </div>
 
       {/* Email Subscription Section */}
-      <div className="py-16 bg-blue-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="py-16 bg-blue-600 text-white relative overflow-hidden">
+        {/* Vertical Animated Bubbles */}
+        <div className="absolute inset-0 pointer-events-none">
+          {subscriptionBubbles.map((bubble) => {
+            const IconComponent = bubble.icon;
+            if (!IconComponent) return null;
+            
+            return (
+              <div
+                key={bubble.id}
+                className="absolute rounded-full flex items-center justify-center text-white font-medium text-xs shadow-lg backdrop-blur-sm border border-white/20"
+                style={{
+                  left: `${bubble.x}%`,
+                  top: `${bubble.y}%`,
+                  width: `${bubble.size}px`,
+                  height: `${bubble.size}px`,
+                  opacity: bubble.opacity,
+                  backgroundColor: bubble.color,
+                  transform: 'translate(-50%, -50%)',
+                  transition: 'all 0.1s ease-out'
+                }}
+                title={bubble.term}
+              >
+                <IconComponent className="w-3 h-3" />
+              </div>
+            );
+          })}
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="text-center md:text-left">
               <h2 className="text-3xl font-bold mb-4">

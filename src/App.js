@@ -8,6 +8,7 @@ import AdminSessionIndicator from './components/AdminSessionIndicator';
 import Dashboard from './pages/Dashboard';
 import Home from './pages/Home';
 import Articles from './pages/Articles';
+import ArticleDetail from './pages/ArticleDetail';
 import Settings from './pages/Settings';
 import Contact from './pages/Contact';
 import NotificationSettings from './pages/NotificationSettings';
@@ -125,6 +126,7 @@ function AppContent() {
             <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/articles" element={<Articles />} />
+            <Route path="/articles/:id" element={<ArticleDetail />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/notifications" element={<NotificationSettings />} />

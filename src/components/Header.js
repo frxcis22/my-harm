@@ -1,16 +1,90 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, Search, Bell, X, Check, LogOut } from 'lucide-react';
+import { Menu, Search, Bell, X, Check, LogOut, Shield, Lock, Eye, Key, Bug, Network, Database, Code, AlertTriangle, Zap, Cpu, HardDrive, Wifi, Server, Fingerprint, Globe, Terminal, FileText, Settings, Users, Activity } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+
+// Security terms for the bubbles
+const securityTerms = [
+  'Firewall', 'Encryption', 'Malware', 'Phishing', 'Ransomware', 'Zero-Day',
+  'Penetration Testing', 'SOC', 'SIEM', 'EDR', 'XDR', 'Threat Intelligence',
+  'Vulnerability Assessment', 'Incident Response', 'Digital Forensics', 'Compliance',
+  'GDPR', 'HIPAA', 'ISO 27001', 'NIST', 'OWASP', 'MITRE ATT&CK', 'CVE', 'CWE',
+  'Authentication', 'Authorization', 'Multi-Factor', 'Biometrics', 'PKI', 'SSL/TLS',
+  'VPN', 'IDS/IPS', 'Honeypot', 'Sandboxing', 'Behavioral Analysis', 'Machine Learning',
+  'Blockchain', 'Quantum Security', 'Cloud Security', 'DevSecOps', 'Container Security'
+];
+
+// Security icons for bubbles - using only the most basic ones
+const securityIcons = [
+  Shield, Lock, Eye, Key, Bug, Network, Database, Code, AlertTriangle
+];
 
 const Header = ({ onMenuClick, isAdmin, onAdminToggle, onAdminLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(3);
+  const [bubbles, setBubbles] = useState([]);
   const { user, isAdminAuthenticated } = useAuth();
   const notificationRef = useRef(null);
   const navigate = useNavigate();
+
+  // Initialize animated bubbles
+  useEffect(() => {
+    const createBubbles = () => {
+      const newBubbles = Array.from({ length: 12 }, (_, index) => {
+        const IconComponent = securityIcons[Math.floor(Math.random() * securityIcons.length)];
+        const term = securityTerms[Math.floor(Math.random() * securityTerms.length)];
+        
+        return {
+          id: index,
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          size: Math.random() * 20 + 15,
+          speed: Math.random() * 0.5 + 0.2,
+          direction: Math.random() * 360,
+          opacity: Math.random() * 0.3 + 0.1,
+          term,
+          icon: IconComponent,
+          color: `hsl(${Math.random() * 60 + 200}, 70%, 60%)` // Blue to cyan range
+        };
+      });
+      setBubbles(newBubbles);
+    };
+
+    createBubbles();
+  }, []);
+
+  // Animate bubbles
+  useEffect(() => {
+    const animateBubbles = () => {
+      setBubbles(prevBubbles => 
+        prevBubbles.map(bubble => {
+          const newX = bubble.x + Math.cos(bubble.direction * Math.PI / 180) * bubble.speed;
+          const newY = bubble.y + Math.sin(bubble.direction * Math.PI / 180) * bubble.speed;
+          
+          // Bounce off edges
+          let newDirection = bubble.direction;
+          if (newX <= 0 || newX >= 100) {
+            newDirection = 180 - newDirection;
+          }
+          if (newY <= 0 || newY >= 100) {
+            newDirection = -newDirection;
+          }
+          
+          return {
+            ...bubble,
+            x: Math.max(0, Math.min(100, newX)),
+            y: Math.max(0, Math.min(100, newY)),
+            direction: newDirection
+          };
+        })
+      );
+    };
+
+    const interval = setInterval(animateBubbles, 50);
+    return () => clearInterval(interval);
+  }, []);
 
   // Mock notifications data
   useEffect(() => {
@@ -120,27 +194,74 @@ const Header = ({ onMenuClick, isAdmin, onAdminToggle, onAdminLogout }) => {
   };
 
   return (
-    <header className="sticky top-0 z-20 bg-card/80 backdrop-blur-sm border-b flex-shrink-0">
-      <div className="flex h-16 items-center justify-between px-6">
+    <header className="sticky top-0 z-20 bg-gradient-to-r from-blue-900 via-blue-800 to-cyan-800 backdrop-blur-sm border-b border-blue-700 flex-shrink-0 relative overflow-hidden">
+      {/* Animated Background Bubbles */}
+      <div className="absolute inset-0 pointer-events-none">
+        {bubbles.map((bubble) => {
+          const IconComponent = bubble.icon;
+          // Add error handling for undefined icons
+          if (!IconComponent) {
+            console.warn('Undefined icon for bubble:', bubble);
+            return null;
+          }
+          return (
+            <div
+              key={bubble.id}
+              className="absolute rounded-full flex items-center justify-center text-white font-medium text-xs shadow-lg backdrop-blur-sm border border-white/20"
+              style={{
+                left: `${bubble.x}%`,
+                top: `${bubble.y}%`,
+                width: `${bubble.size}px`,
+                height: `${bubble.size}px`,
+                opacity: bubble.opacity,
+                backgroundColor: bubble.color,
+                transform: 'translate(-50%, -50%)',
+                transition: 'all 0.1s ease-out'
+              }}
+              title={bubble.term}
+            >
+              <IconComponent className="w-3 h-3" />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Header Content */}
+      <div className="relative z-10 flex h-20 items-center justify-between px-6">
         {/* Left side */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-6">
           <button
             onClick={onMenuClick}
-            className="lg:hidden p-2 hover:bg-muted rounded-md transition-colors"
+            className="lg:hidden p-2 hover:bg-white/10 rounded-md transition-colors text-white"
           >
             <Menu className="h-5 w-5" />
           </button>
           
+          {/* Logo/Brand */}
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-center w-10 h-10 bg-white/20 rounded-full backdrop-blur-sm border border-white/30">
+              <Shield className="h-6 w-6 text-white" />
+            </div>
+            <div className="hidden sm:block">
+              <h1 className="text-xl font-bold text-white tracking-wide">
+                CyberScroll
+              </h1>
+              <p className="text-xs text-blue-200 font-medium">
+                Security Hub
+              </p>
+            </div>
+          </div>
+          
           {/* Search */}
           <form onSubmit={handleSearch} className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-300" />
             <input
               type="text"
               placeholder="Search cybersecurity articles..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleSearchKeyPress}
-              className="pl-10 pr-4 py-2 w-80 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="pl-10 pr-4 py-2 w-80 rounded-lg border-0 bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 focus:bg-white/20 transition-all"
             />
             <button
               type="submit"
@@ -158,7 +279,7 @@ const Header = ({ onMenuClick, isAdmin, onAdminToggle, onAdminLogout }) => {
             <div className="relative" ref={notificationRef}>
               <button 
                 onClick={toggleNotifications}
-                className="p-2 hover:bg-muted rounded-md transition-colors relative"
+                className="p-2 hover:bg-white/10 rounded-md transition-colors relative text-white"
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
@@ -253,7 +374,7 @@ const Header = ({ onMenuClick, isAdmin, onAdminToggle, onAdminLogout }) => {
               {/* Admin Toggle */}
               <button
                 onClick={onAdminToggle}
-                className="p-2 hover:bg-muted rounded-md transition-colors text-xs text-gray-500 hover:text-gray-700"
+                className="p-2 hover:bg-white/10 rounded-md transition-colors text-xs text-blue-200 hover:text-white"
                 title={isAdminAuthenticated ? "Toggle Admin Mode (Ctrl+Shift+A)" : "Login to Admin (Ctrl+Shift+A)"}
               >
                 {isAdmin ? '🔓' : '🔒'}
@@ -263,7 +384,7 @@ const Header = ({ onMenuClick, isAdmin, onAdminToggle, onAdminLogout }) => {
               {isAdmin && (
                 <button
                   onClick={onAdminLogout}
-                  className="p-2 hover:bg-red-100 rounded-md transition-colors text-red-600 hover:text-red-700"
+                  className="p-2 hover:bg-red-500/20 rounded-md transition-colors text-red-300 hover:text-red-200"
                   title="Logout from Admin"
                 >
                   <LogOut className="h-4 w-4" />
@@ -271,8 +392,6 @@ const Header = ({ onMenuClick, isAdmin, onAdminToggle, onAdminLogout }) => {
               )}
             </div>
           )}
-
-
         </div>
       </div>
     </header>
