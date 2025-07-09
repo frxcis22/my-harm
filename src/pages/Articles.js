@@ -434,7 +434,7 @@ const Articles = () => {
                 // Check if it's a curated article
                 if (article.isCurated) {
                   return (
-                    <Link to={`/articles/${article.id}`} key={uniqueKey} className="block hover:shadow-lg transition-shadow rounded-md">
+                    <div key={uniqueKey} className="block hover:shadow-lg transition-shadow rounded-md">
                       <CuratedArticleCard
                         article={article}
                         onLike={handleLike}
@@ -442,7 +442,7 @@ const Articles = () => {
                         isLiking={liking[article.id]}
                         isSharing={sharing[article.id]}
                       />
-                    </Link>
+                    </div>
                   );
                 }
 

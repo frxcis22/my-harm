@@ -26,6 +26,11 @@ const CuratedArticleCard = ({ article, onLike, onShare, onComment, isLiking, isS
 
   const handleExternalLink = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    window.open(article.sourceUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCardClick = () => {
     window.open(article.sourceUrl, '_blank', 'noopener,noreferrer');
   };
 
@@ -44,8 +49,15 @@ const CuratedArticleCard = ({ article, onLike, onShare, onComment, isLiking, isS
     }
   };
 
+  const handleInteractiveClick = (e) => {
+    e.stopPropagation();
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow border-l-4 border-blue-500">
+    <div 
+      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow border-l-4 border-blue-500 cursor-pointer"
+      onClick={handleCardClick}
+    >
       {/* Article Image */}
       {article.imageUrl && (
         <div className="relative h-48 overflow-hidden">
@@ -127,7 +139,7 @@ const CuratedArticleCard = ({ article, onLike, onShare, onComment, isLiking, isS
         {/* Removed old stat line with 👁️, ❤️, 💬 */}
 
         {/* Minimal Action Row */}
-        <div className="flex items-center space-x-6 mt-2">
+        <div className="flex items-center space-x-6 mt-2" onClick={handleInteractiveClick}>
           <button
             onClick={() => onLike(article.id)}
             disabled={isLiking}
@@ -152,7 +164,7 @@ const CuratedArticleCard = ({ article, onLike, onShare, onComment, isLiking, isS
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-3">
+        <div className="space-y-3" onClick={handleInteractiveClick}>
           <a
             href={article.sourceUrl}
             onClick={handleExternalLink}
@@ -198,14 +210,6 @@ const CuratedArticleCard = ({ article, onLike, onShare, onComment, isLiking, isS
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Disclaimer */}
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <p className="text-xs text-yellow-800">
-            <strong>Disclaimer:</strong> This article is curated from external sources and is not written by Francis Bockarie. 
-            All content belongs to their respective authors and publishers. Click "Read Original Article" to view the full content on the source website.
-          </p>
         </div>
       </div>
     </div>
